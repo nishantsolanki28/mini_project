@@ -1,5 +1,3 @@
-#programming codes
-
 //Implementation of two pass assembler for any SIC architecture
 
 
