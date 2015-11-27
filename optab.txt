@@ -1,0 +1,7 @@
+
+START -
+LDA 00
+STA 23
+LDCH 34
+STCH 54
+END -
