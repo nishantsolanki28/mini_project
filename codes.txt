@@ -1,0 +1,317 @@
+#programming codes
+
+//Implementation of two pass assembler for any SIC architecture
+
+
+#include<stdio.h>
+#include<conio.h>
+#include<string.h>
+#include<stdlib.h>
+char *change(int);
+char *conv1(int);       /*Functions declared to be used in the program*/
+void pass2();
+void display(FILE *);
+int conv(char []);
+void main()
+{
+	int loc,st,c=-1,i=0,a,c1=0; 	/*	variables to be used in the program*/
+	char opc[10],opr[10],label[10],o[10];
+	FILE *interfile,*symtab,*inputfile,*optab,*inter;
+	printf("PASS 1 of two pass assembler\n"); //implementing pass 1
+	inputfile=fopen("input.txt","r");
+	interfile=fopen("inter.txt","w");
+	inter=fopen("A.txt","w");            //files to be used
+	fscanf(inputfile,"%s%s%s",label,opc,opr);
+	if(strcmp(opc,"START")==0)
+	{
+		st=conv(opr);                         /* if opcode is START then its the start of the program*/
+		loc=st;
+		fprintf(interfile,"\t%s\t%s\t%s\n",label,opc,opr);
+		fprintf(inter,"\t%s\t%s\t%s\n",label,opc,opr); //writing it to intermediate file
+		fscanf(inputfile,"%s%s%s",label,opc,opr);//scanning the input file
+	}
+else
+loc=0;
+	symtab=fopen("Symtab.txt","w");
+	// the following function insert the values in symbol table.
+	while(strcmp(opc,"END")!=0)
+	{
+		c=-1;
+		for(i=loc-st;i>=0;i=i-16)
+		{
+			c++;
+			a=i;
+		}
+		fprintf(interfile,"%d%d%X",loc/100,c,a); //hexadecimal format
+		fprintf(inter,"%d",loc);
+		if(strcmp(label,"-")!=0)
+		{
+			fprintf(symtab,"%s\t%d%d%X\n",label,loc/100,c,a);
+		}
+		optab=fopen("optab.txt","r");
+		fscanf(optab,"%s",o);
+		//scanning the opcode in optab.
+		while((fgetc(optab)!=EOF))
+		{
+			if(strcmp(opc,o)==0)
+			{
+				loc=loc+3;
+				break;
+			}
+			fscanf(optab,"%s",o);
+		}
+		fclose(optab);
+		if(strcmp(opc,"WORD")==0)
+		{
+			loc=loc+3;
+		}
+		else if(strcmp(opc,"RESW")==0)
+		{
+			loc=loc+(3*conv(opr));   /* calculating the value of locctr according to following opcode*/
+		}
+		else if(strcmp(opc,"RESB")==0)
+		{
+			loc=loc+conv(opr);
+		}
+		else if(strcmp(opc,"BYTE")==0)
+		{
+			i=0;
+			if(opr[i]=='C')
+			{
+				for(i=1;opr[i]!='\0';i++)
+				{
+					c1++;           //character encountered.
+				}
+			loc+=c1-2;
+			}
+			else
+			{
+				loc++;
+			}
+	}
+	fprintf(interfile,"\t%s\t%s\t%s\n",label,opc,opr);
+	fprintf(inter,"\t%s\t%s\t%s\n",label,opc,opr);
+	fscanf(inputfile,"%s%s%s",label,opc,opr);
+	}
+	fprintf(interfile,"\t%s\t%s\t%s\n",label,opc,opr);
+	fprintf(inter,"%d\t%s\t%s\t%s",loc,label,opc,opr);
+	fclose(symtab);
+	fclose(interfile);
+	fclose(inter);
+	printf("Intermediate table\n");
+	interfile=fopen("inter.txt","r");      /* Displaying the following intermediate and symtab files*/
+	display(interfile);
+	printf("\nSymbol table\n");
+	symtab=fopen("Symtab.txt","r");
+	display(symtab);
+	printf("\nThe length of given program is %X\n",loc-st);
+	printf("\nPASS 2 of ASSEMBLER\n");
+	pass2();   //implementing pass 2
+    fclose(symtab);
+	fclose(interfile);
+	fclose(inter);
+}
+//the function converts char to int.
+int conv(char op[])
+{
+	int i,j=0;
+	for(i=0;op[i]!='\0';i++)
+	{
+		j=j*10+(op[i]-48);
+	}
+	return j;
+}
+//display function to display the file
+void display(FILE *fp)
+{
+	char ch;
+	while((ch=fgetc(fp))!=EOF)
+	{
+		printf("%c",ch);
+	}
+}
+void pass2() //pass 2 of two pass assembler
+{
+	int address,startadd,i=0,c=-1,k=0,a1,prevadd,finadd;
+	char loc[10],label[10],opc[10],opr[10],code[10],value[10];
+	char symbol[10],objcode[10],word[10],c1[10],str[10];
+	FILE *inter,*outfile,*optab,*symtab,*objprog;
+	inter=fopen("input.txt","r");
+	outfile=fopen("Out.txt","w");
+	optab=fopen("optab.txt","r");
+	symtab=fopen("Symtab.txt","r");
+	objprog=fopen("Objectprog.txt","w");
+	fscanf(inter,"%s%s%s",label,opc,opr);
+	while(strcmp(opc,"START")!=0) //scanning opcode until END is encountered.
+	{
+		fscanf(inter,"%d%s%s%s",&address,label,opc,opr);
+		startadd=address;
+		break;
+	}
+	while(strcmp(opc,"START")!=0)
+	{
+		fscanf(inter,"%d%s%s%s",&address,label,opc,opr);
+		prevadd=address;
+	}
+	finadd=address;
+	fclose(inter);
+	inter=fopen("inter1.txt","r");
+	fscanf(inter,"%s%s%s",label,opc,opr);
+	//displaying the object program
+	if(strcmp(opc,"START")==0)
+	{
+		fprintf(outfile,"\t%s\t%s\t%s\n",label,opc,opr);
+		fprintf(objprog,"H^%s^00%s^0000%X\n",label,opr,finadd-startadd);
+		strcpy(str,opr);
+		fscanf(inter,"%d%s%s%s",&address,label,opc,opr);
+		finadd=address;
+		fprintf(objprog,"T^00%d^%X",address,prevadd-finadd);
+	}
+	//the following code display the object code of assembler
+	while(strcmp(opc,"START")!=0)
+	{
+		strcpy(objcode,'\0');
+		if((strcmp(opc,"RESW")==0)||(strcmp(opc,"RESB")==0))
+		{
+			strcpy(objcode," ");
+			goto c1;
+		}
+		else if(strcmp(opc,"BYTE")==0)
+		{
+			i=0,k=0;
+			if(opr[i]=='C')
+			{
+				fprintf(objprog,"^");
+				for(i=2;opr[i]!='\0';i++)
+				{
+					c1[k]=opr[i];
+					k++;
+				}
+		c1[k-1]='\0';
+		strcpy(objcode,change(conv(c1)));
+		fprintf(objprog,change(conv(c1)));  /*function to convert 	object code value*/
+		fprintf(outfile,"\n");
+			}
+			else
+			{
+			strcpy(objcode,conv1(conv(opr)));
+			}
+		}
+		else if((strcmp(opc,"WORD")==0))
+		{
+			i=strlen(opr);
+			k=0;
+			for(i=6-i;i>0;i--)
+			{
+				word[k]='0';
+				k++;
+			}
+		word[k]='\0';
+		strcat(word,opr);
+		fprintf(objprog,"^%s",word);
+		strcpy(objcode,word);  //if opcode is WORD
+		}
+		else
+		{
+			fscanf(optab,"%s%s",code,value);
+			while(!feof(optab))
+			{
+				if((strcmp(opc,code)==0))
+				goto c;
+				fscanf(optab,"%s%s",code,value);
+			}
+			c:rewind(symtab);
+			while(!feof(symtab))
+			{
+				fscanf(symtab,"%s%s",symbol,loc);
+				if(strcmp(symbol,opr)==0)
+				goto c2;
+			}
+			c2:strcpy(objcode,strcat(value,loc));
+			fprintf(objprog,"^%s",value,loc);
+		}
+		//code for hexadecimal output.
+		c1:c=-1;
+		for(i=address-startadd;i>=0;i=i-16)
+		{
+			c++;
+			a1=i;
+		}
+		fprintf(outfile,"%d%d%X\t%s\t%s\t%s\t%s\n",address/100,c,a1,label,opc,opr,objcode);
+		fscanf(inter,"%d%s%s%s",&address,label,opc,opr);
+	}
+	fprintf(outfile,"%s\t%s\t%s\t%s\t%s\n",address,label,opc,opr,objcode);
+	fprintf(objprog,"\nE^00%s",str);
+	fclose(outfile);
+	fclose(objprog);
+	printf("Final output file\n");
+	outfile=fopen("Out.txt","r");
+	display(outfile);                     /*Displaying the corresponding files*/
+
+	printf("Object program\n");
+	objprog=fopen("objectprog.txt","r");
+	display(objprog);
+	fclose(objprog);
+	fclose(outfile);
+}
+//function to change char to int.
+char *conv1(int a)
+{
+	char c[10],c1[10];
+	int i=0,r=0;
+	while(a>0)
+	{
+		r=a%10;
+		c[i++]=r+'0';
+		a=a/10;
+	}
+	c[i]='\0';
+	r=0;
+	for(i=strlen(c)-1;i>=0;i--)
+	{
+		c1[r]=c[i];
+		r++;
+	}
+	c1[r]='\0';
+	return(c1);
+}
+//function to change byte value that is used in 'C'
+char *change(int a)
+{
+	int r=0,i=0;
+	char c[10],c1[10];
+	a=a+48;
+
+	while(a>0)
+	{
+		r=a%16;
+		if(r>9)
+		{
+			if(r==10)
+			c[i]='A';
+			else if(r==11)
+			c[i]='B';
+			else if(r==12)
+			c[i]='C';
+			else if(r==13)
+			c[i]='D';
+			else if(r==14)
+			c[i]='E';
+			else if(r==15)
+			c[i]='F';
+		}
+		else
+			c[i]=r+'0';
+		a=a/16;
+		i++;
+	}
+		c[i]='\0';
+		r=0;
+		for(i=strlen(c)-1;i>=0;i--)
+		{
+			c1[r]=c[i];
+			r++;
+		}
+		c1[r]='\0';
+		return(c1);
+}
